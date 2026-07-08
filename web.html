@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Our Flower Garden ✿</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Mali:wght@400;700&display=swap" rel="stylesheet">
+    
+    <script src="web.js" defer></script>
+    
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #f5eedc;
+            font-family: 'Mali', cursive, sans-serif;
+        }
+
+        .scroll-container {
+            width: 100vw;
+            height: 100vh;
+            overflow-x: auto;
+            overflow-y: hidden;
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .game-world {
+            height: 100vh;
+            aspect-ratio: 1920 / 1080;
+            background-image: url('BG_Flower_1920x1080px.png');
+            background-size: cover;
+            background-position: center;
+            position: relative;
+        }
+
+        @media (min-aspect-ratio: 1920/1080) {
+            .scroll-container {
+                overflow-x: hidden; 
+            }
+            .game-world {
+                width: 100vw;
+                height: auto;
+                margin: 0 auto;
+                top: 50%;
+                transform: translateY(-50%);
+            }
+        }
+
+        .audio-toggle-btn {
+            position: absolute;
+            top: 4%;
+            left: 2%;
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.85);
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+
+        .main-menu-zone {
+            position: absolute;
+            top: 10%;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            z-index: 10;
+            transition: opacity 0.4s ease, transform 0.4s ease;
+        }
+
+        .song-title {
+            font-family: 'Mali', cursive, sans-serif;
+            font-size: 32px;
+            font-weight: 700;
+            color: #4a4a4a;
+            text-shadow: 1px 1px 2px rgba(255,255,255,0.8);
+            text-align: center;
+        }
+
+        .menu-card {
+            background: rgba(244, 248, 255, 0.85);
+            border-radius: 20px;
+            padding: 20px 40px;
+            width: 450px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+            backdrop-filter: blur(5px);
+            position: relative;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .close-card-btn {
+            position: absolute;
+            top: -12px;
+            left: -12px;
+            width: 28px;
+            height: 28px;
+            background: #ff7675;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.15);
+        }
+
+        .menu-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-family: 'Mali', cursive, sans-serif;
+            font-size: 16px;
+            font-weight: 700;
+            color: #4a4a4a;
+        }
+        .menu-item .icon-placeholder {
+            width: 45px;
+            height: 45px;
+            background: #ffeaa7;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            transition: transform 0.2s;
+        }
+        .menu-item:hover .icon-placeholder { transform: scale(1.1); }
+
+        .counter-card {
+            position: absolute;
+            bottom: 5%;
+            right: 2%;
+            background: rgba(244, 248, 255, 0.85);
+            padding: 10px 15px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            font-size: 13px;
+            color: #333;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: opacity 0.3s;
+        }
+
+        .hidden {
+            opacity: 0 !important;
+            pointer-events: none !important;
+            transform: translateX(-50%) scale(0.95) !important;
+        }
+        .hidden-counter {
+            opacity: 0 !important;
+            pointer-events: none !important;
+        }
+
+        .dirt-patch-zone {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 5;
+            cursor: default;
+            overflow: hidden;
+        }
+
+        .dirt-patch-zone.planting-active {
+            cursor: pointer;
+        }
+
+        .flower-item {
+            position: absolute;
+            width: 50px;
+            height: auto;
+            display: inline-block;
+            transform-origin: bottom center;
+            transition: transform 0.2s ease;
+            z-index: 6;
+        }
+
+        .flower-item:hover {
+            transform: scale(1.08); 
+        }
+
+        .flower-img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .speech-bubble {
+            position: absolute;
+            bottom: 95%; 
+            left: 50%;
+            background: #ffffff;
+            border: 2.5px solid #2d2d2d; 
+            padding: 8px 14px;
+            border-radius: 14px;
+            font-family: 'Mali', cursive, sans-serif;
+            font-size: 14px;
+            font-weight: 700;
+            color: #2d2d2d;
+            white-space: nowrap;
+            box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.1); 
+            pointer-events: none; 
+            transform: translateX(-50%) scale(0);
+            transform-origin: bottom center;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 10;
+        }
+
+        .speech-bubble::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-width: 8px 8px 0;
+            border-style: solid;
+            border-color: #ffffff transparent;
+            display: block;
+            width: 0;
+        }
+
+        .speech-bubble::before {
+            content: '';
+            position: absolute;
+            bottom: -11px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-width: 9px 9px 0;
+            border-style: solid;
+            border-color: #2d2d2d transparent;
+            display: block;
+            width: 0;
+            z-index: -1;
+        }
+
+        .flower-item:hover .speech-bubble,
+        .flower-item.show-bubble .speech-bubble {
+            transform: translateX(-50%) scale(1);
+        }
+
+        #mainMenu, #plantingIntroCard {
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+
+        .fade-out {
+            opacity: 0;
+            transform: scale(0.95);
+            pointer-events: none;
+        }
+
+        .fade-in {
+            opacity: 1 !important;
+            transform: scale(1) !important;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .planting-card-zone {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(1);
+            width: 85%;
+            max-width: 540px;
+            background: rgba(244, 248, 255, 0.7);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 24px;
+            padding: 40px 24px;
+            box-shadow: 0 10px 35px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            z-index: 15;
+            opacity: 1;
+            transition: opacity 0.4s ease, transform 0.4s ease;
+        }
+
+        .planting-card-zone.card-hidden {
+            opacity: 0 !important;
+            pointer-events: none !important;
+            transform: translate(-50%, -50%) scale(0.92) !important;
+        }
+
+        @media (max-width: 768px) {
+            .planting-card-zone {
+                width: 90%;
+                padding: 30px 16px;
+                gap: 10px;
+            }
+            .planting-card-zone h2 {
+                font-size: 36px !important;
+            }
+            .planting-card-zone img {
+                width: 75px !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="scroll-container">
+        <div class="game-world">
+            
+            <button class="audio-toggle-btn">🔊</button>
+
+            <div id="mainMenu" class="main-menu-zone">
+                <div class="song-title">ดอกไม้ - Home <span style="font-size: 18px; font-weight: normal;">(Feat. Samatong)</span> ✿</div>
+                
+                <div class="menu-card">
+                    <button class="close-card-btn" onclick="closeMainMenu()">✕</button>
+                    
+                    <button class="menu-item" onclick="startPlantingMode()">
+                        <div class="icon-placeholder">🌱</div>
+                        <span>ปลูกดอกไม้</span>
+                    </button>
+                    <button class="menu-item">
+                        <div class="icon-placeholder">🎧</div>
+                        <span>ฟังเพลง</span>
+                    </button>
+                    <button class="menu-item">
+                        <div class="icon-placeholder">✨</div>
+                        <span>ติดตามศิลปิน</span>
+                    </button>
+                </div>
+            </div>
+
+            <div id="plantingIntroCard" class="planting-card-zone card-hidden">
+                <button class="close-card-btn" onclick="backToMainMenu()">✕</button>
+                
+                <div style="display: flex; flex-direction: column; align-items: center; cursor: pointer; width: 100%;" onclick="closePlantingIntro()">
+                    <img src="1.png" alt="Flower Asset" style="width: 95px; height: auto;">
+                    <h2 style="font-size: 52px; font-weight: 700; color: #2d2d2d; margin-top: 8px; text-align: center;">ปลูกดอกไม้</h2>
+                </div>
+            </div>
+
+            <div id="counterCard" class="counter-card" style="display: inline-flex; align-items: center; justify-content: center; gap: 12px; padding: 10px 20px;">
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <span style="font-size: 14px; color: #4a4a4a; font-weight: 500;">คุณปลูกดอกไม้ ดอกที่...</span>
+                    <div class="counter-images-group" style="display: flex; align-items: center; gap: 6px;">
+                        <img src="3.png" alt="Flower 3" style="width: 22px; height: 22px; object-fit: contain;">
+                        <img src="1.png" alt="Flower 1" style="width: 22px; height: 22px; object-fit: contain;">
+                        <img src="9.png" alt="Flower 9" style="width: 22px; height: 22px; object-fit: contain;">
+                        <img src="7.png" alt="Flower 7" style="width: 22px; height: 22px; object-fit: contain;">
+                    </div>
+                </div>
+                <button style="background:none; border:none; color:#aaa; cursor:pointer; font-weight:bold; font-size: 14px; margin-left: 4px; padding: 0 2px;" onclick="closeCounter()">✕</button>
+            </div>
+
+            <div class="dirt-patch-zone"></div>
+
+        </div>
+    </div>
+
+</body>
+</html>
