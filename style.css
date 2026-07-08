@@ -25,14 +25,18 @@
        }
        
        .game-world {
-           width: min(100vw, calc(100vh * 1920 / 1080));
-           height: min(100vh, calc(100vw * 1080 / 1920));
+           aspect-ratio: 1920 / 1080;
+           width: 100%;
+           height: 100%;
+           max-width: calc(100vh * 1920 / 1080);
+           max-height: calc(100vw * 1080 / 1920);
            
            background-image: url('BG_Flower_1920x1080px.png');
-           background-size: cover;
+           background-size: 100% 100%;
            background-position: center;
+           background-repeat: no-repeat;
            position: relative;
-           box-shadow: 0 0 20px rgba(0,0,0,0.1);
+           box-shadow: 0 0 20px rgba(0,0,0,0.15);
        }
 
         @media (min-aspect-ratio: 1920/1080) {
