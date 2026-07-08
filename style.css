@@ -1,47 +1,62 @@
         * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body, html {
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            background-color: #f5eedc;
-            font-family: 'Mali', cursive, sans-serif;
-        }
-
-        .scroll-container {
-            width: 100vw;
-            height: 100vh;
-            overflow-x: auto;
-            overflow-y: hidden;
-            scroll-behavior: smooth;
-            -webkit-overflow-scrolling: touch;
-        }
-
-        .game-world {
-            height: 100vh;
-            aspect-ratio: 1920 / 1080;
-            background-image: url('BG_Flower_1920x1080px.png');
-            background-size: cover;
-            background-position: center;
-            position: relative;
-        }
-
-        @media (min-aspect-ratio: 1920/1080) {
-            .scroll-container {
-                overflow-x: hidden; 
-            }
-            .game-world {
-                width: 100vw;
-                height: auto;
-                margin: 0 auto;
-                top: 50%;
-                transform: translateY(-50%);
-            }
-        }
+           box-sizing: border-box;
+           margin: 0;
+           padding: 0;
+       }
+       
+       body, html {
+           width: 100%;
+           height: 100%;
+           overflow: hidden;
+           background-color: #f5eedc;
+           font-family: 'Mali', cursive, sans-serif;
+       }
+       
+       /* กล่องครอบหลัก */
+       .scroll-container {
+           width: 100vw;
+           height: 100vh;
+           position: relative;
+       }
+       
+       /* ตัวเกมและภาพพื้นหลัง */
+       .game-world {
+           background-image: url('BG_Flower_1920x1080px.png');
+           background-repeat: no-repeat;
+           position: relative;
+       }
+       
+       /* ==========================================
+          1. สำหรับหน้าจอคอมพิวเตอร์ (PC / จอแนวนอน)
+          ========================================== */
+       @media (min-width: 1025px) {
+           .scroll-container {
+               overflow: hidden !important; /* บนคอมล็อกนิ่งๆ ไม่ต้องเลื่อน */
+           }
+           .game-world {
+               width: 100vw !important;
+               height: 100vh !important;
+               background-size: 100% 100% !important; /* ยืดภาพถมเต็มจอ Browser */
+               background-position: center !important;
+           }
+       }
+       
+       /* ==========================================
+          2. สำหรับหน้าจอมือถือ (Mobile / จอแนวตั้ง)
+          ========================================== */
+       @media (max-width: 1024px) {
+           .scroll-container {
+               overflow-x: auto !important; /* เปิดระบบให้ใช้นิ้วปัดเลื่อนซ้าย-ขวาได้ */
+               overflow-y: hidden !important; /* ล็อกแนวตั้งไว้ไม่ให้สั่น */
+               -webkit-overflow-scrolling: touch; /* ท่าไม้ตายช่วยให้ปัดบน iPhone/Android ลื่นขึ้น */
+           }
+           .game-world {
+               height: 100vh !important; /* ล็อกความสูงเกมให้พอดีกับความสูงหน้าจอมือถือ */
+               width: calc(100vh * 1920 / 1080) !important; /* ปล่อยความกว้างขยายออกไปด้านข้างตามสัดส่วนรูปภาพ */
+               background-size: 100% 100% !important;
+               background-position: center center !important;
+           }
+       }
 
         .audio-toggle-btn {
             position: absolute;
