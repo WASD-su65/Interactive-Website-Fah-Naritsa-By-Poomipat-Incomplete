@@ -31,6 +31,8 @@ const flowerAssets = [
 let tempX = 0;
 let tempY = 0;
 let currentUser = "";
+let selectedFlowerName = "";   // ชื่อดอกไม้ภาษาไทยที่ผู้ใช้เลือก เช่น "ดอกกุหลาบ"
+let selectedFlowerImg = "";    // ไฟล์รูปของดอกไม้ที่เลือก เช่น "7.png"
 
 async function loadFlowers() {
     const { data, error } = await supabaseClient.from('flower').select('*');
@@ -44,22 +46,30 @@ async function loadFlowers() {
     });
 }
 
-async function saveToDatabase(x, y, flower_id, nickname, message) {
+async function saveToDatabase(x, y, flower_id, nickname, message, flower_name = "") {    
+    const uuid = localStorage.getItem('user_uuid');
+
+    const payload = { 
+        x: x, 
+        y: y, 
+        flower_id: flower_id, 
+        flower_name: flower_name,   // ✅ ชื่อดอกไม้ภาษาไทยที่ผู้ใช้เลือก (ต้องมีคอลัมน์นี้ในตาราง Supabase)
+        nickname: nickname, 
+        message: message,
+        user_uuid: uuid
+    };
+
+    console.log("🚀 กำลังส่งข้อมูล:", payload);
+
     const { data, error } = await supabaseClient
         .from('flower')
-        .insert([{ 
-            x: x, 
-            y: y, 
-            flower_id: flower_id, 
-            nickname: nickname, 
-            message: message 
-        }]);
+        .insert([payload]);
     
     if (error) {
-        console.error("บันทึกไม่สำเร็จ:", error);
-        alert("บันทึกไม่สำเร็จ: " + error.message);
+        console.error("❌ บันทึกพลาด! สาเหตุ:", error);
+        alert("บันทึกไม่สำเร็จ ลองดู Console (F12) นะครับ");
     } else {
-        console.log("บันทึกสำเร็จ!");
+        console.log("✅ บันทึกสำเร็จ!");
     }
 }
 
@@ -121,6 +131,7 @@ function spawnFlower(xPercent, yPercent, imgName = null, nickname = "I", message
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+    getUserIdentity(); // ✅ สร้าง/ดึง user_uuid ให้พร้อมใช้งานก่อนบันทึกข้อมูล
     loadFlowers(); 
     
     const dirtPatchZone = document.querySelector('.dirt-patch-zone');
@@ -203,23 +214,44 @@ function submitNameAndStart() {
         return;
     }
 
-    document.getElementById('displayName').innerText = nameInput;
+    // ✅ เก็บชื่อผู้ใช้ไว้ในตัวแปร currentUser เพื่อใช้ตอนบันทึกลงฐานข้อมูล
+    currentUser = nameInput.trim();
+
+    document.getElementById('displayName').innerText = currentUser;
     document.getElementById('nameInputModal').classList.add('hidden');
     document.getElementById('flowerSelectionModal').classList.remove('hidden');
 }
 
-function selectFlower(flowerName) {
-    console.log("เลือกดอกไม้: " + flowerName);
+function selectFlower(flowerName, flowerImg) {
+    console.log("เลือกดอกไม้: " + flowerName + " (" + flowerImg + ")");
+
+    // ✅ เก็บดอกไม้ที่เลือกไว้ใช้ตอนบันทึกลงฐานข้อมูล
+    selectedFlowerName = flowerName;
+    selectedFlowerImg = flowerImg;
+
+    // ✅ ปิดหน้าต่างเลือกดอกไม้ แล้วเปิดโหมดปลูก (คลิกที่แปลงดินได้)
+    const flowerModal = document.getElementById('flowerSelectionModal');
+    if (flowerModal) flowerModal.classList.add('hidden');
+
+    const dirtPatch = document.querySelector('.dirt-patch-zone');
+    if (dirtPatch) dirtPatch.classList.add('planting-active');
+
+    // แสดงการ์ดแนะนำ "ปลูกดอกไม้" (ถ้ามี) เพื่อบอกผู้ใช้ให้ไปคลิกที่แปลงดิน
+    const plantingIntro = document.getElementById('plantingIntroCard');
+    if (plantingIntro) plantingIntro.classList.remove('card-hidden');
 }
 
 function confirmPlanting() {
     const msgInput = document.getElementById('messageInput');
     const message = (msgInput && msgInput.value) ? msgInput.value : "ส่งต่อความรัก ✿";
-    const randomImg = flowerAssets[Math.floor(Math.random() * flowerAssets.length)];
 
-    spawnFlower(tempX, tempY, randomImg, currentUser, message);
+    // ✅ ใช้ดอกไม้ที่ผู้ใช้เลือกจริงๆ ถ้ายังไม่ได้เลือก (เผื่อ flow ยังไม่ครบ) ให้สุ่มสำรองไว้ก่อน
+    const flowerImgToUse = selectedFlowerImg || flowerAssets[Math.floor(Math.random() * flowerAssets.length)];
+    const flowerNameToUse = selectedFlowerName || "";
 
-    saveToDatabase(tempX, tempY, randomImg, currentUser, message);
+    spawnFlower(tempX, tempY, flowerImgToUse, currentUser, message);
+
+    saveToDatabase(tempX, tempY, flowerImgToUse, currentUser, message, flowerNameToUse);
     spawnedFlowers.push({ x: tempX, y: tempY });
     
     closeModal();
