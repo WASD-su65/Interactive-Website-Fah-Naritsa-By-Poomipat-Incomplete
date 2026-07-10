@@ -9,6 +9,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Mali:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="web.js" defer></script>
 </head>
 <body>
@@ -36,22 +38,22 @@
                     <button class="close-card-btn" onclick="closeMainMenu()">✕</button>
                     
                     <button class="menu-item" onclick="startPlantingMode()">
-                    <div class="icon-placeholder">
-                        <img src="เลือกดอกไม้2.png" alt="ปลูกดอกไม้" class="menu-icon">
-                    </div>
-                </button>
+                        <div class="icon-placeholder">
+                            <img src="เลือกดอกไม้2.png" alt="ปลูกดอกไม้" class="menu-icon">
+                        </div>
+                    </button>
 
-                <button class="menu-item">
-                    <div class="icon-placeholder">
-                        <img src="ฟังเพลง.png" alt="ฟังเพลง" class="menu-icon">
-                    </div>
-                </button>
+                    <button class="menu-item">
+                        <div class="icon-placeholder">
+                            <img src="ฟังเพลง.png" alt="ฟังเพลง" class="menu-icon">
+                        </div>
+                    </button>
 
-                <button class="menu-item">
-                    <div class="icon-placeholder">
-                        <img src="ติดตาม.png" alt="ติดตามศิลปิน" class="menu-icon">
-                    </div>
-                </button>
+                    <button class="menu-item">
+                        <div class="icon-placeholder">
+                            <img src="ติดตาม.png" alt="ติดตามศิลปิน" class="menu-icon">
+                        </div>
+                    </button>
                 </div>
             </div>
 
@@ -84,6 +86,98 @@
 
         </div>
     </div>
+    
     <audio id="bgMusic" src="FAH_Flower_BKT.mp3" preload="auto" loop hidden></audio>
+    
+    <div id="nameInputModal" class="overlay-modal hidden">
+        <div class="modal-content">
+            <p>สวัสดีค่ะเรา ฟ้านริศา น้าาา<br>ขอบคุณที่เข้ามาช่วยฟ้าปลูกดอกไม้นะคะ<br>แต่ๆ ก่อนจะไปปลูกดอกไม้ด้วยกัน<br>ฟ้าขอรู้จักชื่อคุณก่อนได้มั้ยคะ > &lt;</p>
+            
+            <input type="text" id="userNameInput" placeholder="NAME :">
+            
+            <button class="go-plant-btn" onclick="submitNameAndStart()">
+                <img src="เลือกดอกไม้.png" alt="ไปเลือกดอกไม้" class="btn-icon">
+            </button>
+        </div>
+    </div>
+    <div id="flowerSelectionModal" class="overlay-modal hidden">
+        <div class="modal-content selection-wrapper">
+            <p>ยินดีที่ได้รู้จักนะคะคุณ <span id="displayName"></span><br>วันนี้จะปลูกดอกไม้อะไรดีคะ ^^</p>
+            
+            <div class="flower-grid">
+                <div class="flower-card" onclick="selectFlower('forgot me not')">
+                    <img src="9.png" alt="Flower">
+                    <p>forgot me not</p>
+                    <p>ความทรงจำ</p>
+                </div>
+                <div class="flower-card" onclick="selectFlower('ดอกเดซี่')">
+                    <img src="3.png" alt="Flower">
+                    <p>ดอกเดซี่</p>
+                    <p>ความจริงใจ</p>
+                </div>
+                <div class="flower-card" onclick="selectFlower('ดอกครอกัส')">
+                    <img src="5.png" alt="Flower">
+                    <p>ดอกครอกัส</p>
+                    <p>การเริ่มต้น</p>
+                </div>
+                <div class="flower-card" onclick="selectFlower('ดอกยิบโซ')">
+                    <img src="6.png" alt="Flower">
+                    <p>ดอกยิบโซ</p>
+                    <p>การเคียงข้าง</p>
+                </div>
+                <div class="flower-card" onclick="selectFlower('ดอกคอสมอส')">
+                    <img src="4.png" alt="Flower">
+                    <p>ดอกคอสมอส</p>
+                    <p>ความสุขในทุกวัน</p>
+                </div>
+                <div class="flower-card" onclick="selectFlower('ดอกทานตะวัน')">
+                    <img src="1.png" alt="Flower">
+                    <p>ดอกทานตะวัน</p>
+                    <p>หัวใจที่มั่นคง</p>
+                </div>
+                <div class="flower-card" onclick="selectFlower('ดอกทิวลิป')">
+                    <img src="2.png" alt="Flower">
+                    <p>ดอกทิวลิป</p>
+                    <p>ตกหลุ่มรัก</p>
+                </div>
+                <div class="flower-card" onclick="selectFlower('ดอกกุหลาบ')">
+                    <img src="7.png" alt="Flower">
+                    <p>ดอกกุหลาบ</p>
+                    <p>หัวใจที่เลือกกัน</p>
+                </div>
+                <div class="flower-card" onclick="selectFlower('ดอกดาวเรือง')">
+                    <img src="8.png" alt="Flower">
+                    <p>ดอกดาวเรือง</p>
+                    <p>ความอบอุ่น</p>
+                </div>
+                <div class="flower-card" onclick="selectFlower('ดอกลาเวนเดอร์')">
+                    <img src="6.png" alt="Flower">
+                    <p>ดอกลาเวนเดอร์</p>
+                    <p>การเยียวยา</p>
+                </div>
+                <div class="flower-card" onclick="selectFlower('โคลเวอร์')">
+                    <img src="11.png" alt="Flower">
+                    <p>โคลเวอร์</p>
+                    <p>โชคดีที่มีเธอ</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="plantingModal" class="overlay-modal hidden">
+        <div class="modal-content">
+            <p>ฝากข้อความน่ารักๆ<br>ไว้ที่ดอกไม้ดอกนี้ได้เลยนะคะ ✿</p>
+            
+            <input type="text" id="messageInput" placeholder="คำอวยพร :">
+            
+            <button class="go-plant-btn" onclick="confirmPlanting()">
+                ปลูกเลย!
+            </button>
+            <button class="go-plant-btn" onclick="closeModal()" style="margin-top: 10px; background-color: #ccc; color: #333;">
+                ยกเลิก
+            </button>
+        </div>
+    </div>
+
 </body>
 </html>
