@@ -8,10 +8,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Mali:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=35">
     
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="web.js?v=15" defer></script>
+    <script src="web.js?v=30" defer></script>
 </head>
 <body>
     <div id="welcomeScreen" class="welcome-overlay-bg">
@@ -42,6 +42,7 @@
                 
                 <div id="mainMenu" class="menu-card">
                     <button class="close-card-btn" onclick="closeMainMenu()">✕</button>
+                    <button class="expand-card-btn" onclick="expandMainMenu()" aria-label="เปิดเมนู">›</button>
                     
                     <button class="menu-item" onclick="startPlantingMode()">
                         <div class="icon-placeholder">
@@ -60,6 +61,12 @@
                             <img src="ติดตาม.png" alt="ติดตามศิลปิน" class="menu-icon">
                         </div>
                     </a>
+
+                    <button class="menu-item" onclick="openAlbum()">
+                        <div class="icon-placeholder">
+                            <img src="อัลบัม.png" alt="อัลบัม" class="menu-icon">
+                        </div>
+                    </button>
                 </div>
             </div>
 
@@ -73,10 +80,8 @@
             </div>
 
             <div id="counterCard" class="counter-card hidden-counter" style="display: inline-flex; align-items: center; justify-content: center; gap: 12px; padding: 10px 20px;">
-                <button style="position: absolute; top: -10px; left: -10px; background: #f3706c; border: none; color: #ffffff; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 11px; font-weight: bold; flex-shrink: 0; box-shadow: 0 2px 6px rgba(0,0,0,0.15); transition: transform 0.1s;" 
-                    onclick="closeCounter()"
-                    onmouseover="this.style.transform='scale(1.1)'" 
-                    onmouseout="this.style.transform='scale(1)'">✕</button>
+                <button class="close-card-btn" onclick="closeCounter()">✕</button>
+                <button class="expand-card-btn" onclick="expandCounter()" aria-label="เปิดตัวนับ">‹</button>
                 <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                     <span style="font-size: 14px; color: #4a4a4a; font-weight: 500;">คุณปลูกดอกไม้ ดอกที่</span>
                     <span id="counterNumber" style="font-size: 20px; color: #f3706c; font-weight: 700; font-family: 'Mali', cursive; padding: 0 4px; text-shadow: 0 1px 2px rgba(255,255,255,0.6);">-</span>
@@ -193,5 +198,31 @@
             </div>
         </div>
     </div>
+
+    <div id="albumModal" class="album-overlay hidden">
+        <button class="album-close-btn" onclick="closeAlbum()">✕</button>
+
+        <div class="album-book">
+            <div class="album-page album-page-left">
+                <ul id="albumListLeft" class="album-entry-list"></ul>
+            </div>
+
+            <div class="album-page album-page-right">
+                <ul id="albumListRight" class="album-entry-list"></ul>
+            </div>
+
+            <button class="album-nav-btn album-prev-btn" onclick="albumPrevPage()" aria-label="หน้าก่อน">
+                <span>‹</span>
+            </button>
+            <button class="album-nav-btn album-next-btn" onclick="albumNextPage()" aria-label="หน้าถัดไป">
+                <span>›</span>
+            </button>
+
+            <div class="album-page-indicator">
+                <span id="albumCurrentPage">1</span> / <span id="albumTotalPage">1</span>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>

@@ -10,25 +10,37 @@ const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
 // 🛠️ ZONE นักพัฒนา: พิกัดแปลงดิน
 // ==========================================
 const SHOW_DEBUG_ZONE = false; 
-const MIN_DISTANCE = 2.6;      
+const MIN_DISTANCE = 1.4;      
+
+// ═══════════════════════════════════════════════════════════
+// 🌸 ระบบ FIFO Cooldown - ควบคุมจำนวนดอกไม้บนหน้าจอ
+// ═══════════════════════════════════════════════════════════
+// เต็ม MAX_FLOWERS → เริ่ม cooldown ทุก COOLDOWN_INTERVAL ms → หายเก่าสุดก่อน
+// ลดลงเหลือ MIN_FLOWERS → หยุด cooldown → รอปลูกใหม่จนเต็มอีก
+// (ข้อมูลใน Supabase ยังคงอยู่ครบ - แค่ลบออกจาก DOM เท่านั้น)
+const MAX_FLOWERS = 100;                // เต็มเพดาน → เริ่ม cooldown
+const MIN_FLOWERS = 80;                 // ลดถึงจุดนี้ → หยุด cooldown
+const COOLDOWN_INTERVAL = 10 * 1000;    // 10 วินาที ต่อการหาย 1 ดอก
+const FADE_OUT_DURATION = 1000;         // fade-out animation 1 วิ ก่อนลบ DOM
+let cooldownTimer = null;               // reference ของ setInterval - เพื่อหยุดได้
 
 const DIRT_POLYGON = [
-    { x: 12.53, y: 16.78 },
-    { x: 12.75, y: 15.02 },
-    { x: 17.79, y: 9.41 },
-    { x: 20.40, y: 7.98 },
-    { x: 31.14, y: 8.05 },
-    { x: 47.15, y: 5.63 },
-    { x: 54.01, y: 5.76 },
-    { x: 56.91, y: 6.68 },
-    { x: 60.18, y: 9.03 },
-    { x: 61.37, y: 13.00 },
-    { x: 61.19, y: 18.81 },
-    { x: 59.71, y: 22.79 },
-    { x: 49.11, y: 26.43 },
-    { x: 23.78, y: 25.78 },
-    { x: 17.87, y: 22.79 },
-    { x: 13.44, y: 19.20 }
+    { x: 8.79,  y: 17.11 },
+    { x: 9.04,  y: 15.09 },
+    { x: 14.84, y: 8.64 },
+    { x: 17.84, y: 6.99 },
+    { x: 30.19, y: 7.07 },
+    { x: 48.60, y: 4.29 },
+    { x: 56.49, y: 4.44 },
+    { x: 59.83, y: 5.50 },
+    { x: 63.59, y: 8.20 },
+    { x: 64.96, y: 12.76 },
+    { x: 64.75, y: 19.45 },
+    { x: 63.05, y: 24.02 },
+    { x: 50.86, y: 28.21 },
+    { x: 21.73, y: 27.46 },
+    { x: 14.93, y: 24.02 },
+    { x: 9.84,  y: 19.89 }
 ];
 
 const DIRT_BOUNDS = {
@@ -72,12 +84,20 @@ async function updateFlowerPosition(id, x, y) {
 }
 
 async function loadFlowers() {
-    const { data, error } = await supabaseClient.from('flower').select('*');
+    const { data, error } = await supabaseClient
+        .from('flower')
+        .select('*')
+        .order('id', { ascending: false })
+        .limit(MAX_FLOWERS);
+
     if (error) {
         console.error("Error loading:", error);
         return;
     }
-    data.forEach(item => {
+
+    console.log(`🌱 โหลดดอกไม้ ${data.length} ดอกจาก Database (เอาแค่ ${MAX_FLOWERS} ล่าสุด)`);
+
+    data.reverse().forEach(item => {
         let posX = Number(item.x);
         let posY = Number(item.y);
 
@@ -90,9 +110,11 @@ async function loadFlowers() {
             updateFlowerPosition(item.id, posX, posY);
         }
 
-        spawnFlower(posX, posY, item.flower_id, item.nickname, item.message);
-        spawnedFlowers.push({ x: posX, y: posY }); 
+        const el = spawnFlower(posX, posY, item.flower_id, item.nickname, item.message);
+        spawnedFlowers.push({ x: posX, y: posY, element: el }); 
     });
+
+    manageFlowerCap();
 }
 
 async function saveToDatabase(x, y, flower_id, nickname, message, flower_name = "") {    
@@ -124,47 +146,26 @@ async function saveToDatabase(x, y, flower_id, nickname, message, flower_name = 
 }
 
 async function showFlowerCounter() {
-    console.log("📊 กำลังนับจำนวนดอกไม้ทั้งหมด...");
-
-    let totalCount = null;
-
+    let totalCount = spawnedFlowers.length;
     try {
         const { count, error } = await supabaseClient
             .from('flower')
             .select('*', { count: 'exact', head: true });
-
-        if (error) {
-            console.error("⚠️ นับจาก Supabase ไม่สำเร็จ - จะใช้จำนวนดอกไม้ในหน้าจอแทน:", error);
-        } else {
-            totalCount = count;
-            console.log(`📊 จำนวนดอกไม้ใน Supabase: ${count}`);
-        }
+        if (!error && count !== null && count !== undefined) totalCount = count;
     } catch (err) {
-        console.error("⚠️ เกิด exception ตอนนับ:", err);
+        console.error("⚠️ นับ Supabase ไม่ได้ ใช้ fallback:", err);
     }
 
-    if (totalCount === null || totalCount === undefined) {
-        totalCount = spawnedFlowers.length;
-        console.log(`📊 ใช้ fallback: spawnedFlowers.length = ${totalCount}`);
-    }
-
-    const counterCard = document.getElementById('counterCard');
+    const counterCard   = document.getElementById('counterCard');
     const counterNumber = document.getElementById('counterNumber');
 
-    if (!counterCard) {
-        console.error("❌ ไม่พบ #counterCard ใน HTML");
-        return;
-    }
-    if (!counterNumber) {
-        console.error("❌ ไม่พบ #counterNumber ใน HTML");
-        return;
+    if (counterNumber) counterNumber.innerText = totalCount;
+    if (counterCard) {
+        counterCard.classList.remove('hidden');
+        counterCard.classList.remove('hidden-counter');
     }
 
-    counterNumber.innerText = totalCount;
-    counterCard.classList.remove('hidden-counter');
-    counterCard.classList.remove('hidden');
-
-    console.log(`🎉 คุณเป็นคนปลูกดอกไม้ ดอกที่ ${totalCount} - แสดง counterCard แล้ว`);
+    console.log(`🎉 คุณเป็นคนปลูกดอกไม้ ดอกที่ ${totalCount}`);
 }
 
 function getUserIdentity() {
@@ -213,7 +214,7 @@ function isTooCloseToOthers(x, y) {
 
 function spawnFlower(xPercent, yPercent, imgName = null, nickname = "I", message = "plant for Fah Naritsa✿") {
     const patchZone = document.querySelector('.dirt-patch-zone');
-    if (!patchZone) return;
+    if (!patchZone) return null;
 
     const randomImgSrc = imgName || flowerAssets[Math.floor(Math.random() * flowerAssets.length)];
     const flowerItem = document.createElement('div');
@@ -223,7 +224,7 @@ function spawnFlower(xPercent, yPercent, imgName = null, nickname = "I", message
     flowerItem.style.zIndex = Math.floor(100 - yPercent);
     
     const randomScale = 0.85 + Math.random() * 0.3;
-    flowerItem.style.transform = `scale(${randomScale})`;
+    flowerItem.style.transform = `translateX(-50%) scale(${randomScale})`;
 
     const randomFlip = Math.random() > 0.5 ? 1 : -1;
 
@@ -241,6 +242,42 @@ function spawnFlower(xPercent, yPercent, imgName = null, nickname = "I", message
     });
 
     patchZone.appendChild(flowerItem);
+    return flowerItem;
+}
+
+function manageFlowerCap() {
+    const currentCount = spawnedFlowers.length;
+
+    if (currentCount >= MAX_FLOWERS && !cooldownTimer) {
+        console.log(`🌼 สวนเต็ม cap (${currentCount}/${MAX_FLOWERS}) - เริ่ม cooldown ทุก ${COOLDOWN_INTERVAL/1000} วินาที`);
+        cooldownTimer = setInterval(removeOldestFlower, COOLDOWN_INTERVAL);
+    }
+}
+
+function removeOldestFlower() {
+    if (spawnedFlowers.length === 0) return;
+
+    if (spawnedFlowers.length <= MIN_FLOWERS) {
+        clearInterval(cooldownTimer);
+        cooldownTimer = null;
+        console.log(`🌱 ลดถึง ${MIN_FLOWERS} ดอกแล้ว - หยุด cooldown รอปลูกใหม่จนเต็ม ${MAX_FLOWERS} อีกครั้ง`);
+        return;
+    }
+
+    const oldest = spawnedFlowers.shift();
+    const el = oldest.element;
+
+    if (!el || !el.parentNode) {
+        console.log(`⏳ FIFO: ดอกเก่าสุดไม่มี DOM element - ข้าม (เหลือ ${spawnedFlowers.length} ดอก)`);
+        return;
+    }
+
+    el.classList.add('fading-out');
+    console.log(`🍂 FIFO: ดอกเก่าสุดกำลังหาย... (จะเหลือ ${spawnedFlowers.length} ดอก)`);
+
+    setTimeout(() => {
+        if (el.parentNode) el.parentNode.removeChild(el);
+    }, FADE_OUT_DURATION);
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -258,6 +295,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const polygon = document.createElementNS(svgNS, 'polygon');
             const pointsAttr = DIRT_POLYGON.map(p => `${p.x},${100 - p.y}`).join(' ');
+            polygon.setAttribute('points', pointsAttr);
             polygon.setAttribute('fill', 'rgba(255,0,0,0.15)');
             polygon.setAttribute('stroke', 'red');
             polygon.setAttribute('stroke-width', '0.3');
@@ -267,21 +305,27 @@ document.addEventListener("DOMContentLoaded", () => {
             dirtPatchZone.appendChild(svg);
         }
 
-        // ❌ ปิดการสุ่มดอกไม้ 120 ต้นตอนโหลดหน้า - แสดงเฉพาะดอกไม้จริงจาก Database เท่านั้น
-        // หากต้องการเปิดกลับ ให้ลบ /* ... */ ด้านล่างออก
+        // ❌ [DISABLED] ปิดการสุ่มดอกไม้ - ใช้ข้อมูลจริงจาก Database เท่านั้น
         /*
+        const TARGET_RANDOM_FLOWERS = 120 + Math.floor(Math.random() * 10);
         let spawnedCount = 0;
         let attempts = 0;
-        while (spawnedCount < 120 && attempts < 8000) {
+        while (spawnedCount < TARGET_RANDOM_FLOWERS && attempts < 12000) {
             attempts++;
             const initialX = DIRT_BOUNDS.minX + Math.random() * (DIRT_BOUNDS.maxX - DIRT_BOUNDS.minX);
             const initialY = DIRT_BOUNDS.minY + Math.random() * (DIRT_BOUNDS.maxY - DIRT_BOUNDS.minY);
             
             if (isInsideDirtEllipse(initialX, initialY) && !isTooCloseToOthers(initialX, initialY)) {
-                spawnFlower(initialX, initialY);
-                spawnedFlowers.push({ x: initialX, y: initialY });
+                const el = spawnFlower(initialX, initialY);
+                spawnedFlowers.push({ x: initialX, y: initialY, element: el });
                 spawnedCount++;
             }
+        }
+
+        console.log(`🧪 [TEST] เป้าหมาย: ${TARGET_RANDOM_FLOWERS} ดอก | สุ่มได้จริง: ${spawnedCount} ดอก | attempts: ${attempts}`);
+        console.log(`🧪 [TEST] MIN_DISTANCE: ${MIN_DISTANCE}% | ถ้าสุ่มไม่ครบ = แปลว่าพื้นที่หนาแน่นมาก`);
+        if (spawnedCount < TARGET_RANDOM_FLOWERS) {
+            console.warn(`⚠️ สุ่มไม่ครบเป้า! ขาดอีก ${TARGET_RANDOM_FLOWERS - spawnedCount} ดอก - พื้นที่ปลูกใกล้เต็มแล้ว`);
         }
         */
 
@@ -293,14 +337,8 @@ document.addEventListener("DOMContentLoaded", () => {
             const clickX = ((e.clientX - rect.left) / rect.width) * 100;
             const clickY = 100 - (((e.clientY - rect.top) / rect.height) * 100);
 
-            if (!isInsideDirtEllipse(clickX, clickY)) {
-                console.log('❌ คลิกนอกแปลงดิน');
-                return;
-            }
-            if (isTooCloseToOthers(clickX, clickY)) {
-                console.log('❌ คลิกใกล้ดอกไม้ต้นอื่นเกินไป');
-                return;
-            }
+            if (!isInsideDirtEllipse(clickX, clickY)) { console.log('❌ คลิกนอกแปลงดิน'); return; }
+            if (isTooCloseToOthers(clickX, clickY)) { console.log('❌ ใกล้ดอกอื่นเกินไป'); return; }
 
             tempX = clickX;
             tempY = clickY;
@@ -309,11 +347,13 @@ document.addEventListener("DOMContentLoaded", () => {
             const flowerNameToUse = selectedFlowerName || "";
             const message = pendingMessage || "ส่งต่อความรัก ✿";
 
-            console.log(`🌸 ปลูกดอกไม้: x=${tempX.toFixed(2)}, y=${tempY.toFixed(2)}, flower=${flowerImgToUse}`);
+            console.log(`🌸 ปลูก: x=${tempX.toFixed(2)}, y=${tempY.toFixed(2)}, flower=${flowerImgToUse}`);
 
-            spawnFlower(tempX, tempY, flowerImgToUse, currentUser, message);
+            const el = spawnFlower(tempX, tempY, flowerImgToUse, currentUser, message);
             const saveOk = await saveToDatabase(tempX, tempY, flowerImgToUse, currentUser, message, flowerNameToUse);
-            spawnedFlowers.push({ x: tempX, y: tempY });
+            spawnedFlowers.push({ x: tempX, y: tempY, element: el });
+
+            manageFlowerCap();
 
             this.classList.remove('planting-active');
             const hintToast = document.getElementById('plantingHintToast');
@@ -321,16 +361,11 @@ document.addEventListener("DOMContentLoaded", () => {
             pendingMessage = "";
 
             const mainMenu = document.getElementById('mainMenu');
-            if (mainMenu) {
-                mainMenu.classList.remove('hidden');
-                mainMenu.classList.remove('fade-out');
-            }
+            if (mainMenu) mainMenu.classList.remove('hidden');
             const songTitle = document.querySelector('.song-title');
             if (songTitle) songTitle.classList.remove('hidden');
 
-            if (saveOk) {
-                showFlowerCounter();
-            }
+            if (saveOk) showFlowerCounter();
         });
     }
 });
@@ -396,10 +431,11 @@ function selectFlower(flowerName, flowerMeaning, flowerImg, flowerDetail) {
 let pendingMessage = "";
 
 function confirmPlanting() {
+
     const msgInput = document.getElementById('messageInput');
     pendingMessage = (msgInput && msgInput.value) ? msgInput.value : "ส่งต่อความรัก ✿";
 
-    console.log(`🌸 พร้อมปลูกแล้ว: flower=${selectedFlowerImg}, msg=${pendingMessage} - รอคลิกที่พื้นดิน`);
+    console.log(`🌸 พร้อมปลูก: flower=${selectedFlowerImg}, msg=${pendingMessage} - รอคลิกที่พื้นดิน`);
 
     const plantModal = document.getElementById('plantingModal');
     if (plantModal) plantModal.classList.add('hidden');
@@ -412,18 +448,19 @@ function confirmPlanting() {
 }
 
 function closeModal(backToSelection = true) {
+
     const plantModal = document.getElementById('plantingModal');
     if (plantModal) {
         plantModal.classList.add('hidden');
     }
-    
+
     if (backToSelection) {
         const selectionModal = document.getElementById('flowerSelectionModal');
         if (selectionModal) {
             selectionModal.classList.remove('hidden');
         }
     }
-    
+
     const msgInput = document.getElementById('messageInput');
     if (msgInput) {
         msgInput.value = "";
@@ -435,12 +472,163 @@ function closeModal(backToSelection = true) {
 
 function closeMainMenu() {
     const mainMenu = document.getElementById('mainMenu');
-    if (mainMenu) mainMenu.classList.add('hidden');
+    if (mainMenu) mainMenu.classList.add('collapsed');
+}
+function expandMainMenu() {
+    const mainMenu = document.getElementById('mainMenu');
+    if (mainMenu) mainMenu.classList.remove('collapsed');
 }
 
 function closeCounter() {
     const counterCard = document.getElementById('counterCard');
-    if (counterCard) counterCard.classList.add('hidden-counter');
+    if (counterCard) counterCard.classList.add('collapsed');
+}
+function expandCounter() {
+    const counterCard = document.getElementById('counterCard');
+    if (counterCard) counterCard.classList.remove('collapsed');
+}
+
+const ALBUM_ENTRIES_PER_PAGE = 5;
+const ALBUM_ENTRIES_PER_SPREAD = 10;
+const ALBUM_MAX_SPREADS = 5;
+const ALBUM_MAX_ENTRIES = ALBUM_MAX_SPREADS * ALBUM_ENTRIES_PER_SPREAD;
+let albumData = [];
+let albumCurrentSpread = 0;
+
+async function openAlbum() {
+    console.log(`📖 เปิดอัลบัม - ดึงข้อมูล ${ALBUM_MAX_ENTRIES} แถวล่าสุดจาก Database...`);
+
+    const albumModal = document.getElementById('albumModal');
+    if (!albumModal) {
+        console.error("❌ ไม่พบ #albumModal");
+        return;
+    }
+
+    const mainMenu = document.getElementById('mainMenu');
+    if (mainMenu) mainMenu.classList.add('hidden');
+
+    try {
+        const { data, error } = await supabaseClient
+            .from('flower')
+            .select('flower_id, flower_name, nickname, message, created_at, id')
+            .order('created_at', { ascending: false })
+            .limit(ALBUM_MAX_ENTRIES);
+
+        if (error) {
+            console.error("❌ ดึงข้อมูลอัลบัมไม่สำเร็จ:", error);
+            const fallback = await supabaseClient
+                .from('flower')
+                .select('flower_id, flower_name, nickname, message, id')
+                .order('id', { ascending: false })
+                .limit(ALBUM_MAX_ENTRIES);
+            if (fallback.error) {
+                albumData = [];
+            } else {
+                albumData = fallback.data || [];
+            }
+        } else {
+            albumData = data || [];
+        }
+
+        console.log(`📖 ได้ข้อมูล ${albumData.length} รายการ`);
+    } catch (err) {
+        console.error("❌ Exception ตอนดึงอัลบัม:", err);
+        albumData = [];
+    }
+
+    albumCurrentSpread = 0;
+    renderAlbumPage();
+    albumModal.classList.remove('hidden');
+}
+
+function closeAlbum() {
+    const albumModal = document.getElementById('albumModal');
+    if (albumModal) albumModal.classList.add('hidden');
+
+    const mainMenu = document.getElementById('mainMenu');
+    if (mainMenu) mainMenu.classList.remove('hidden');
+}
+
+function renderAlbumPage() {
+    const listLeft  = document.getElementById('albumListLeft');
+    const listRight = document.getElementById('albumListRight');
+    const curPageEl = document.getElementById('albumCurrentPage');
+    const totPageEl = document.getElementById('albumTotalPage');
+    const prevBtn   = document.querySelector('.album-prev-btn');
+    const nextBtn   = document.querySelector('.album-next-btn');
+
+    if (!listLeft || !listRight) return;
+
+    const totalSpreads = Math.max(1, Math.ceil(albumData.length / ALBUM_ENTRIES_PER_SPREAD));
+    if (curPageEl) curPageEl.innerText = albumCurrentSpread + 1;
+    if (totPageEl) totPageEl.innerText = totalSpreads;
+
+    if (prevBtn) prevBtn.disabled = albumCurrentSpread === 0;
+    if (nextBtn) nextBtn.disabled = albumCurrentSpread >= totalSpreads - 1;
+
+    const startIdx = albumCurrentSpread * ALBUM_ENTRIES_PER_SPREAD;
+    const leftEntries  = albumData.slice(startIdx, startIdx + ALBUM_ENTRIES_PER_PAGE);
+    const rightEntries = albumData.slice(startIdx + ALBUM_ENTRIES_PER_PAGE, startIdx + ALBUM_ENTRIES_PER_SPREAD);
+
+    listLeft.innerHTML  = renderAlbumEntries(leftEntries);
+    listRight.innerHTML = renderAlbumEntries(rightEntries);
+}
+
+function renderAlbumEntries(entries) {
+    if (!entries || entries.length === 0) {
+        return '<li class="album-entry-empty">ยังไม่มีดอกไม้ในหน้านี้</li>';
+    }
+    return entries.map(item => {
+        const flowerImg  = item.flower_id || '1.png';
+        const nickname   = escapeHtml(item.nickname || '(ไม่ระบุชื่อ)');
+        const flowerName = escapeHtml(item.flower_name || 'ดอกไม้');
+        const message    = escapeHtml(item.message || '');
+
+        return `
+            <li class="album-entry">
+                <img src="${flowerImg}" alt="flower" class="album-entry-img" onerror="this.style.opacity='0.3'">
+                <div class="album-entry-text">
+                    <div class="album-entry-line">
+                        <span class="album-entry-label">คุณ</span>
+                        <span class="album-entry-value" title="${nickname}">${nickname}</span>
+                    </div>
+                    <div class="album-entry-line">
+                        <span class="album-entry-label">ปลูก</span>
+                        <span class="album-entry-value" title="${flowerName}">${flowerName}</span>
+                    </div>
+                    <div class="album-entry-line">
+                        <span class="album-entry-label">ข้อความ</span>
+                        <span class="album-entry-value" title="${message}">${message}</span>
+                    </div>
+                </div>
+            </li>
+        `;
+    }).join('');
+}
+
+function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function albumPrevPage() {
+    if (albumCurrentSpread > 0) {
+        albumCurrentSpread--;
+        renderAlbumPage();
+    }
+}
+
+function albumNextPage() {
+    const totalSpreads = Math.max(1, Math.ceil(albumData.length / ALBUM_ENTRIES_PER_SPREAD));
+    if (albumCurrentSpread < totalSpreads - 1) {
+        albumCurrentSpread++;
+        renderAlbumPage();
+    }
 }
 
 function closePlantingIntro() {
@@ -525,7 +713,13 @@ function enterGarden() {
 
 window.toggleMusic = toggleMusic;
 window.closeMainMenu = closeMainMenu;
+window.expandMainMenu = expandMainMenu;
 window.closeCounter = closeCounter;
+window.expandCounter = expandCounter;
 window.startPlantingMode = startPlantingMode;
 window.closePlantingIntro = closePlantingIntro;
 window.backToMainMenu = backToMainMenu;
+window.openAlbum = openAlbum;
+window.closeAlbum = closeAlbum;
+window.albumPrevPage = albumPrevPage;
+window.albumNextPage = albumNextPage;
