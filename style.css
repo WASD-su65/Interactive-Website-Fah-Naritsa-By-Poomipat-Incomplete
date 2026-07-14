@@ -1024,7 +1024,7 @@
     .album-entry-list {
         justify-content: flex-start;
         gap: 3%;
-        padding-top: 8;
+        padding-top: 8%;
     }
     /* ✅ padding-left มากขึ้น (ดันเข้ากรอบขวาของหน้า) - เนื้อหาอยู่ในกรอบสี่เหลี่ยมพอดี */
     .album-page { padding: 0.5% 1% 0 3.5%; top: 8%; bottom: 12%; }
