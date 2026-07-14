@@ -8,10 +8,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Mali:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=35">
+    <link rel="stylesheet" href="style.css?v=37">
     
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="web.js?v=30" defer></script>
+    <script src="web.js?v=36" defer></script>
 </head>
 <body>
     <div id="welcomeScreen" class="welcome-overlay-bg">
@@ -221,6 +221,19 @@
             <div class="album-page-indicator">
                 <span id="albumCurrentPage">1</span> / <span id="albumTotalPage">1</span>
             </div>
+        </div>
+    </div>
+
+    <div id="thankYouCard" class="thank-you-overlay hidden">
+        <img id="thankYouCardImg" src="1_card.png" alt="การ์ดขอบคุณ" class="thank-you-card-img">
+
+        <div class="thank-you-buttons">
+            <button class="thank-you-btn thank-you-btn-download" onclick="downloadThankYouCard()">
+                📥 ดาวน์โหลดการ์ด
+            </button>
+            <button class="thank-you-btn thank-you-btn-back" onclick="closeThankYouCard()">
+                🏠 กลับหน้าหลัก
+            </button>
         </div>
     </div>
 

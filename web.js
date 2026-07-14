@@ -24,6 +24,9 @@ const COOLDOWN_INTERVAL = 10 * 1000;    // 10 วินาที ต่อกา
 const FADE_OUT_DURATION = 1000;         // fade-out animation 1 วิ ก่อนลบ DOM
 let cooldownTimer = null;               // reference ของ setInterval - เพื่อหยุดได้
 
+// ✅ พื้นที่แปลงดินจริงไม่ใช่วงรีสมมาตร (ปลายซ้ายแหลม ปลายขวาป้าน) จึงใช้ polygon
+// ที่วัดจากขอบเขตพื้นที่ดินจริงในภาพพื้นหลัง (BG_Flower_1920x1080px.png) แทนสูตรวงรี
+// พิกัดแต่ละจุดคือ { x, y } เป็นเปอร์เซ็นต์ (x = จากซ้าย, y = จากล่าง) ของ .dirt-patch-zone
 const DIRT_POLYGON = [
     { x: 8.79,  y: 17.11 },
     { x: 9.04,  y: 15.09 },
@@ -84,6 +87,7 @@ async function updateFlowerPosition(id, x, y) {
 }
 
 async function loadFlowers() {
+
     const { data, error } = await supabaseClient
         .from('flower')
         .select('*')
@@ -198,6 +202,7 @@ function getRandomValidDirtPosition(maxAttempts = 300) {
             return { x, y };
         }
     }
+
     return {
         x: (DIRT_BOUNDS.minX + DIRT_BOUNDS.maxX) / 2,
         y: (DIRT_BOUNDS.minY + DIRT_BOUNDS.maxY) / 2
@@ -224,6 +229,7 @@ function spawnFlower(xPercent, yPercent, imgName = null, nickname = "I", message
     flowerItem.style.zIndex = Math.floor(100 - yPercent);
     
     const randomScale = 0.85 + Math.random() * 0.3;
+
     flowerItem.style.transform = `translateX(-50%) scale(${randomScale})`;
 
     const randomFlip = Math.random() > 0.5 ? 1 : -1;
@@ -268,6 +274,7 @@ function removeOldestFlower() {
     const el = oldest.element;
 
     if (!el || !el.parentNode) {
+
         console.log(`⏳ FIFO: ดอกเก่าสุดไม่มี DOM element - ข้าม (เหลือ ${spawnedFlowers.length} ดอก)`);
         return;
     }
@@ -360,12 +367,15 @@ document.addEventListener("DOMContentLoaded", () => {
             if (hintToast) hintToast.classList.add('hidden');
             pendingMessage = "";
 
-            const mainMenu = document.getElementById('mainMenu');
-            if (mainMenu) mainMenu.classList.remove('hidden');
-            const songTitle = document.querySelector('.song-title');
-            if (songTitle) songTitle.classList.remove('hidden');
+            if (saveOk) {
+                showThankYouCard(flowerImgToUse);
+            } else {
 
-            if (saveOk) showFlowerCounter();
+                const mainMenu = document.getElementById('mainMenu');
+                if (mainMenu) mainMenu.classList.remove('hidden');
+                const songTitle = document.querySelector('.song-title');
+                if (songTitle) songTitle.classList.remove('hidden');
+            }
         });
     }
 });
@@ -382,6 +392,7 @@ function startPlantingMode() {
     if (nameModal) {
         nameModal.classList.remove('hidden');
     }
+
     const counterCard = document.getElementById('counterCard');
     if (counterCard) counterCard.classList.add('hidden-counter');
 
@@ -412,7 +423,7 @@ function selectFlower(flowerName, flowerMeaning, flowerImg, flowerDetail) {
     selectedFlowerMeaning = flowerMeaning;
     selectedFlowerImg = flowerImg;
     selectedFlowerDetail = flowerDetail;
-    
+
     document.getElementById('modalFlowerName').innerText = selectedFlowerName;
     document.getElementById('modalFlowerMeaning').innerText = selectedFlowerMeaning;
     document.getElementById('modalFlowerImg').src = selectedFlowerImg;
@@ -431,7 +442,6 @@ function selectFlower(flowerName, flowerMeaning, flowerImg, flowerDetail) {
 let pendingMessage = "";
 
 function confirmPlanting() {
-
     const msgInput = document.getElementById('messageInput');
     pendingMessage = (msgInput && msgInput.value) ? msgInput.value : "ส่งต่อความรัก ✿";
 
@@ -448,12 +458,11 @@ function confirmPlanting() {
 }
 
 function closeModal(backToSelection = true) {
-
     const plantModal = document.getElementById('plantingModal');
     if (plantModal) {
         plantModal.classList.add('hidden');
     }
-
+    
     if (backToSelection) {
         const selectionModal = document.getElementById('flowerSelectionModal');
         if (selectionModal) {
@@ -486,6 +495,60 @@ function closeCounter() {
 function expandCounter() {
     const counterCard = document.getElementById('counterCard');
     if (counterCard) counterCard.classList.remove('collapsed');
+}
+
+let currentThankYouCardImg = "";
+
+function showThankYouCard(flowerImg) {
+
+    const cardImg = flowerImg.replace('.png', '_card.png');
+    currentThankYouCardImg = cardImg;
+
+    const card = document.getElementById('thankYouCard');
+    const cardImgEl = document.getElementById('thankYouCardImg');
+    if (!card || !cardImgEl) {
+        console.error("❌ ไม่พบ #thankYouCard หรือ #thankYouCardImg");
+        return;
+    }
+
+    cardImgEl.src = cardImg;
+    card.classList.remove('hidden');
+    console.log(`🎴 โชว์การ์ดขอบคุณ: ${cardImg}`);
+}
+
+async function downloadThankYouCard() {
+    if (!currentThankYouCardImg) return;
+
+    try {
+        const response = await fetch(currentThankYouCardImg);
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = currentThankYouCardImg;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        console.log(`📥 ดาวน์โหลดการ์ด: ${currentThankYouCardImg}`);
+    } catch (err) {
+        console.error("❌ ดาวน์โหลดล้มเหลว:", err);
+        window.open(currentThankYouCardImg, '_blank');
+    }
+}
+
+function closeThankYouCard() {
+    const card = document.getElementById('thankYouCard');
+    if (card) card.classList.add('hidden');
+
+    const mainMenu = document.getElementById('mainMenu');
+    if (mainMenu) mainMenu.classList.remove('hidden');
+    const songTitle = document.querySelector('.song-title');
+    if (songTitle) songTitle.classList.remove('hidden');
+
+    showFlowerCounter();
 }
 
 const ALBUM_ENTRIES_PER_PAGE = 5;
@@ -716,6 +779,9 @@ window.closeMainMenu = closeMainMenu;
 window.expandMainMenu = expandMainMenu;
 window.closeCounter = closeCounter;
 window.expandCounter = expandCounter;
+window.showThankYouCard = showThankYouCard;
+window.closeThankYouCard = closeThankYouCard;
+window.downloadThankYouCard = downloadThankYouCard;
 window.startPlantingMode = startPlantingMode;
 window.closePlantingIntro = closePlantingIntro;
 window.backToMainMenu = backToMainMenu;

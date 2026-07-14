@@ -949,8 +949,21 @@
 
         @media (max-width: 768px) {
             .album-close-btn { top: 12px; right: 14px; width: 34px; height: 34px; font-size: 15px; }
-            .album-entry { gap: 8px; }
-            .album-entry-text { font-size: 10px; }
+            .album-entry { gap: 6px; }
+            .album-entry-img { width: clamp(24px, 5vw, 34px); }
+            .album-entry-text { font-size: 9px; gap: 1px; }
+            .album-entry-line { gap: 4px; }
+            .album-page { padding: 0.8% 2%; }
+        }
+
+        @media (max-width: 500px) {
+            .album-entry { gap: 4px; }
+            .album-entry-img { width: clamp(20px, 4.5vw, 28px); }
+            .album-entry-text { font-size: 8px; }
+            .album-entry-line { gap: 3px; }
+            .album-page { padding: 0.5% 1.5%; }
+            .album-page-left  { left: 14%;  right: 53%; }
+            .album-page-right { left: 46%;  right: 16%; }
         }
 
         .planting-hint-toast {
@@ -1099,4 +1112,101 @@
         @keyframes expandButtonPop {
             from { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
             to   { opacity: 1; transform: translate(-50%, -50%) scale(1);    }
+        }
+
+        .thank-you-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.65);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100000;
+            padding: 20px;
+            gap: 20px;
+            animation: thankYouFadeIn 0.4s ease-out;
+            overflow-y: auto;
+        }
+        .thank-you-overlay.hidden { display: none !important; }
+
+        @keyframes thankYouFadeIn {
+            from { opacity: 0; }
+            to   { opacity: 1; }
+        }
+
+        .thank-you-card-img {
+            max-width: min(400px, 85vw);
+            max-height: 80vh;
+            height: auto;
+            width: auto;
+            object-fit: contain;
+            border-radius: 12px;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+            animation: thankYouPopIn 0.55s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes thankYouPopIn {
+            from { opacity: 0; transform: translateY(30px) scale(0.9); }
+            to   { opacity: 1; transform: translateY(0)   scale(1);   }
+        }
+
+        .thank-you-buttons {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+            animation: thankYouButtonsSlide 0.5s ease-out 0.3s both;
+        }
+
+        @keyframes thankYouButtonsSlide {
+            from { opacity: 0; transform: translateY(20px); }
+            to   { opacity: 1; transform: translateY(0);    }
+        }
+
+        .thank-you-btn {
+            padding: 12px 26px;
+            border-radius: 999px;
+            border: 2.5px solid #ffffff;
+            font-family: 'Mali', cursive, sans-serif;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.25),
+                        inset 0 2px 4px rgba(255, 255, 255, 0.5);
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .thank-you-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 22px rgba(0, 0, 0, 0.35),
+                        inset 0 2px 4px rgba(255, 255, 255, 0.5);
+        }
+
+        .thank-you-btn:active {
+            transform: translateY(0) scale(0.97);
+        }
+
+        .thank-you-btn-download {
+            background: linear-gradient(135deg, #a8dcff 0%, #7fb8f0 100%);
+            color: #1e4a7a;
+        }
+
+        .thank-you-btn-back {
+            background: linear-gradient(135deg, #ffd7c8 0%, #ffb598 100%);
+            color: #7a4f5e;
+        }
+
+        @media (max-width: 500px) {
+            .thank-you-btn {
+                font-size: 13px;
+                padding: 10px 20px;
+            }
+            .thank-you-buttons {
+                gap: 10px;
+            }
         }
