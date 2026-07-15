@@ -1026,7 +1026,7 @@
         gap: 3%;
     }
     /* ✅ padding-left มากขึ้น - เนื้อหาอยู่ในกรอบสี่เหลี่ยม + ขยับขึ้นให้ entry แรกอยู่ใต้ title */
-    .album-page { padding: 0.5% 1% 0 3.5%; top: 13%; bottom: 8%; }
+    .album-page { padding: 0.5% 1% 0 3.5%; top: 16%; bottom: 8%; }
 }
 
 /* หน้าจอมือถือแคบมาก (portrait) - ลด font/icon เพิ่ม เพื่อให้แสดง 5 entry ได้ครบ */
@@ -1036,7 +1036,7 @@
     .album-entry-text { font-size: 4.5px; line-height: 1.25; }
     .album-entry-line { gap: 1.5px; }
     .album-entry-list { gap: 2%; }
-    .album-page { padding: 0.3% 0.8% 0 3%; top: 12%; bottom: 8%; }
+    .album-page { padding: 0.3% 0.8% 0 3%; top: 15%; bottom: 8%; }
     .album-page-left  { left: 15%;  right: 53%; }
     .album-page-right { left: 48%;  right: 17%; }
 }
